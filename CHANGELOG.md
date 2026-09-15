@@ -26,3 +26,7 @@ All notable changes to this project are documented in this file.
   Unsupported-language handling was already covered by ticket 02. Verified all paths
   (malformed URL → 400, nonexistent repo → 404, TypeScript repo → unsupported flag,
   Python repo → 200 with diagram).
+- Redesigned the frontend (`frontend/index.html`) with a dark theme, card-based layout, and
+  loading/error/empty states. The language-breakdown pie chart now groups small slices into
+  an "Other" bucket (configurable thresholds) for readability, with full detail still shown
+  in the table alongside a new percentage column.

@@ -23,11 +23,17 @@
   </form>
   <div id="status"></div>
   <div id="error"></div>
+
+  <h2>Language breakdown</h2>
   <pre class="mermaid" id="chart"></pre>
   <table id="table" style="display:none">
     <thead><tr><th>Language</th><th>Files</th><th>Lines</th></tr></thead>
     <tbody></tbody>
   </table>
+
+  <h2>Class diagram</h2>
+  <div id="class-diagram-message"></div>
+  <pre class="mermaid" id="class-diagram"></pre>
 
   <script>
     mermaid.initialize({ startOnLoad: false });
@@ -40,6 +46,8 @@
     const chartEl = document.getElementById("chart");
     const tableEl = document.getElementById("table");
     const tbody = tableEl.querySelector("tbody");
+    const classDiagramEl = document.getElementById("class-diagram");
+    const classDiagramMsgEl = document.getElementById("class-diagram-message");
 
     function renderTable(breakdown) {
       tbody.innerHTML = "";
@@ -64,11 +72,32 @@
       chartEl.innerHTML = svg;
     }
 
+    async function renderClassDiagram(data) {
+      classDiagramMsgEl.textContent = "";
+      classDiagramEl.innerHTML = "";
+
+      if (!data.class_diagram_supported) {
+        classDiagramMsgEl.textContent = `Deep class-diagram analysis isn't supported yet for this repo's primary language (${data.primary_language || "unknown"}). Only Python is supported today.`;
+        return;
+      }
+      if (data.class_diagram_error) {
+        classDiagramMsgEl.textContent = `Could not generate a class diagram: ${data.class_diagram_error}`;
+        return;
+      }
+
+      classDiagramEl.removeAttribute("data-processed");
+      classDiagramEl.textContent = data.class_diagram;
+      const { svg } = await mermaid.render("class-diagram-svg", data.class_diagram);
+      classDiagramEl.innerHTML = svg;
+    }
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       errorEl.textContent = "";
       chartEl.innerHTML = "";
       tableEl.style.display = "none";
+      classDiagramEl.innerHTML = "";
+      classDiagramMsgEl.textContent = "";
       statusEl.textContent = "Analyzing...";
 
       const repoUrl = document.getElementById("repo-url").value;
@@ -88,6 +117,7 @@
         statusEl.textContent = "";
         renderTable(data.language_breakdown);
         await renderChart(data.language_breakdown);
+        await renderClassDiagram(data);
       } catch (err) {
         statusEl.textContent = "";
         errorEl.textContent = err.message;

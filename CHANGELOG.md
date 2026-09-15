@@ -18,3 +18,11 @@ All notable changes to this project are documented in this file.
   flag otherwise; frontend renders the diagram or a "not supported" message. Verified against
   `psf/requests` (correct classes/relationships) and `mermaid-js/mermaid` (correctly falls
   back to unsupported for TypeScript).
+- Implemented ticket 03: error handling. Backend now pre-checks repo existence via the GitHub
+  API before cloning, returning a distinct 404 (`RepoNotFoundError`) for nonexistent/private
+  repos, 400 for malformed URLs, and 500 for internal failures, each with a clear message.
+  Disabled git credential prompts/helpers during clone so failures don't leak confusing
+  auth-related git output. Frontend already surfaces `detail` from any non-2xx response.
+  Unsupported-language handling was already covered by ticket 02. Verified all paths
+  (malformed URL → 400, nonexistent repo → 404, TypeScript repo → unsupported flag,
+  Python repo → 200 with diagram).

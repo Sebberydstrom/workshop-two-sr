@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.extractors.registry import get_extractor
 from app.language_breakdown import get_language_breakdown
-from app.repo_fetch import clone_repo
+from app.repo_fetch import RepoNotFoundError, clone_repo
 
 app = FastAPI(title="Repo Visualizer")
 
@@ -47,6 +47,8 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                     class_diagram_error = str(exc)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RepoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

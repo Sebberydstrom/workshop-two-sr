@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Repo Visualizer</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    input { flex: 1; padding: 0.5rem; font-size: 1rem; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    #error { color: #b00020; margin-bottom: 1rem; }
+    #status { color: #555; margin-bottom: 1rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <h1>Repo Visualizer</h1>
+  <form id="analyze-form">
+    <input id="repo-url" type="text" placeholder="https://github.com/psf/requests" required />
+    <button type="submit">Analyze</button>
+  </form>
+  <div id="status"></div>
+  <div id="error"></div>
+  <pre class="mermaid" id="chart"></pre>
+  <table id="table" style="display:none">
+    <thead><tr><th>Language</th><th>Files</th><th>Lines</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    mermaid.initialize({ startOnLoad: false });
+
+    const BACKEND_URL = "http://localhost:8000";
+
+    const form = document.getElementById("analyze-form");
+    const statusEl = document.getElementById("status");
+    const errorEl = document.getElementById("error");
+    const chartEl = document.getElementById("chart");
+    const tableEl = document.getElementById("table");
+    const tbody = tableEl.querySelector("tbody");
+
+    function renderTable(breakdown) {
+      tbody.innerHTML = "";
+      for (const row of breakdown) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.language}</td><td>${row.files}</td><td>${row.lines}</td>`;
+        tbody.appendChild(tr);
+      }
+      tableEl.style.display = breakdown.length ? "table" : "none";
+    }
+
+    async function renderChart(breakdown) {
+      const lines = breakdown
+        .slice(0, 12)
+        .map((row) => `    "${row.language}" : ${row.lines}`)
+        .join("\n");
+      const def = `pie title Language breakdown (lines of code)\n${lines}`;
+
+      chartEl.removeAttribute("data-processed");
+      chartEl.textContent = def;
+      const { svg } = await mermaid.render("chart-svg", def);
+      chartEl.innerHTML = svg;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.textContent = "";
+      chartEl.innerHTML = "";
+      tableEl.style.display = "none";
+      statusEl.textContent = "Analyzing...";
+
+      const repoUrl = document.getElementById("repo-url").value;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repo_url: repoUrl }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || "Analysis failed");
+        }
+
+        statusEl.textContent = "";
+        renderTable(data.language_breakdown);
+        await renderChart(data.language_breakdown);
+      } catch (err) {
+        statusEl.textContent = "";
+        errorEl.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>
